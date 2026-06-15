@@ -1,11 +1,19 @@
 const pool = require('../config/db');
 
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
 // POST /clientes
 const crearCliente = async (req, res) => {
-  const { nombre, documento, email } = req.body;
+  const nombre    = (req.body.nombre    ?? '').toString().trim();
+  const documento = (req.body.documento ?? '').toString().trim();
+  const email     = (req.body.email     ?? '').toString().trim();
 
   if (!nombre || !documento || !email) {
     return res.status(400).json({ error: 'nombre, documento y email son requeridos' });
+  }
+
+  if (!EMAIL_RE.test(email)) {
+    return res.status(400).json({ error: 'El formato del email no es válido' });
   }
 
   try {
@@ -34,9 +42,7 @@ const crearCliente = async (req, res) => {
 // GET /clientes
 const listarClientes = async (req, res) => {
   try {
-    const result = await pool.query(
-      'SELECT * FROM clientes ORDER BY id ASC'
-    );
+    const result = await pool.query('SELECT * FROM clientes ORDER BY id ASC');
     return res.status(200).json(result.rows);
   } catch (err) {
     console.error('Error al listar clientes:', err);
@@ -53,7 +59,7 @@ const resumenClientes = async (req, res) => {
          c.nombre,
          c.documento,
          c.email,
-         COUNT(p.id) AS cantidad_polizas,
+         COUNT(p.id)                        AS cantidad_polizas,
          COALESCE(SUM(p.monto_asegurado), 0) AS monto_total_asegurado
        FROM clientes c
        LEFT JOIN polizas p ON p.cliente_id = c.id
